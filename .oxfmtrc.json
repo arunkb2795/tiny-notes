@@ -6,6 +6,8 @@
   "semi": true,
   "sortPackageJson": false,
   "ignorePatterns": [
+    "sites/**",
+    ".bun-cache/**",
     ".codex/**",
     ".agents/**",
     ".aws/**",

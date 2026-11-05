@@ -12,19 +12,19 @@ Build a **mobile-first, installable PWA** for personal rich-text notes. Anyone m
 
 ## 2. Locked product decisions
 
-| Area         | Requirement                                                                                                                                                                                |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Registration | **Open**; name, unique email, password (minimum 8 characters). No email confirmation; warn on signup that password recovery is unavailable.                                                |
-| Auth         | Better Auth email/password only; cookie sessions; signup signs user in. No custom password hashing or auth implementation.                                                                 |
-| Data access  | All server mutations use React/Next.js **Server Functions (Server Actions)**; all data fetching runs in **React Server Components** through server-only data access.                       |
-| Navigation   | Path segments only; no application query parameters, search, or filtering. `/notes` always shows all owner notes in fixed newest-updated-first order.                                      |
-| Notes        | Separate required title (1–120 characters, trimmed) and valid rich-text JSON body (empty document allowed). Max serialized content **100 KiB** per note; **no per-user note-count quota**. |
-| Saving       | **Autosave only**, not manual Save. Debounce **800 ms** after changes; flush on editor blur where possible. Explicit saving/saved/unsaved/error indicator and retry.                       |
-| Sharing      | Off by default. Enabling creates a cryptographically random token; disabling deletes token and revokes prior URL; re-enabling issues a new token.                                          |
-| Deletion     | Permanent, with confirmation.                                                                                                                                                              |
-| Appearance   | System theme initially; light/dark toggle in app header; persist override locally. **No `/settings` page.**                                                                                |
-| PWA          | Installable on Android and iOS; network required for notes/auth/share. No promise of offline editing or content availability.                                                              |
-| Hosting      | Single Bun-compatible persistent server with writable SQLite disk; HTTPS in production.                                                                                                    |
+| Area         | Requirement                                                                                                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Registration | **Open**; name, unique email, password (minimum 8 characters). No email confirmation; warn on signup that password recovery is unavailable.                                                              |
+| Auth         | Better Auth email/password only; cookie sessions; signup signs user in. No custom password hashing or auth implementation.                                                                               |
+| Data access  | All server mutations use React/Next.js **Server Functions (Server Actions)**; all data fetching runs in **React Server Components** through server-only data access.                                     |
+| Navigation   | Path segments only; no application query parameters, search, or filtering. `/notes` always shows all owner notes in fixed newest-updated-first order.                                                    |
+| Notes        | Separate required title (1–120 characters, trimmed) and valid rich-text JSON body (empty document allowed). Max serialized content **100 KiB** per note; **no per-user note-count quota**.               |
+| Saving       | **Autosave with manual Save**. Debounce **800 ms** after changes; flush on editor blur where possible. Save flushes the same queue immediately. Explicit saving/saved/unsaved/error indicator and retry. |
+| Sharing      | Off by default. Enabling creates a cryptographically random token; disabling deletes token and revokes prior URL; re-enabling issues a new token.                                                        |
+| Deletion     | Permanent, with confirmation.                                                                                                                                                                            |
+| Appearance   | System theme initially; light/dark toggle in app header; persist override locally. **No `/settings` page.**                                                                                              |
+| PWA          | Installable on Android and iOS; network required for notes/auth/share. No promise of offline editing or content availability.                                                                            |
+| Hosting      | Single Bun-compatible persistent server with writable SQLite disk; HTTPS in production.                                                                                                                  |
 
 ## 3. Routes and UI
 
@@ -166,7 +166,7 @@ Do not cache authenticated or public note content across requests in Next.js, th
 1. On **New note**, keep local draft until a nonempty title exists; first autosave invokes `createNoteAction`. Avoid inserting a blank/untitled note and **never duplicate** a creation after delayed responses: one in-flight create at a time.
 2. On saved notes, debounce valid changes by **800 ms**. `updateNoteAction` receives the current `revision`; only one save per note in flight. If edits occur while saving, queue the latest draft and send it **after** the response, preserving order.
 3. UI states: `Saved`, `Saving…`, `Unsaved changes`, `Offline / Couldn't save — Retry`. Keep draft text in memory on failures, retry with bounded backoff or Retry button; **never claim success without server acknowledgement**.
-4. On blur, request immediate save when valid. On navigation/close with unsaved or in-flight changes, show a warning where browser support permits; `beforeunload` is **not** a reliable save mechanism. Do not silently discard unsaved changes.
+4. On blur, request immediate save when valid. App links and logout wait for the latest save acknowledgement before leaving; show progress and allow Stay here to cancel navigation without cancelling a submitted save. Validation/network/conflict/session failures retain the draft and block navigation, with an explicitly confirmed Discard and leave option. Closing/reloading or browser back/forward with unsaved changes retains warnings where supported; `beforeunload` is **not** a reliable save mechanism. Do not silently discard unsaved changes.
 5. On `CONFLICT`, stop automatic writes, retain local draft, and show clear **Reload server version / Keep my draft** options; do not silently overwrite newer data. On `UNAUTHENTICATED`, preserve the draft in the current view and prompt sign-in; never send another user's draft under a new session.
 6. On share/public reads, display **last server-saved** data only. Saving title and content is atomic. Never persist editor state as an HTML string.
 
@@ -218,7 +218,7 @@ Provide Bun scripts for `dev`, `build`, `start`, `db:migrate`, `test`, `lint`, a
 - Auth tables match pinned Better Auth generated schema; custom migration is idempotent; SQLite foreign keys and app ownership constraints work.
 - Users cannot list/read/edit/delete/share another user's note; request attempts produce no private data.
 - Tiptap content survives create → autosave → reload; rapid typing, blur, slow responses, network failure/recovery, `CONFLICT` results, and leaving the page never silently report an unsaved draft as saved.
-- Autosave creates one note, never duplicates it; no Manual Save button remains.
+- Autosave and manual Save share one queue, create one note without duplicates, and preserve validation and conflict protection.
 - Sharing is private by default; enabling exposes public page anonymously; disabling immediately revokes old link; new enable creates a new token; public view is read-only and sanitized.
 - Unknown routes, invalid/revoked tokens, deleted/non-owned notes show proper **404**; app render failures show safe error boundaries; Server Actions return useful safe codes without internal details.
 - Light/dark and system default work; preference persists without `/settings`. Android/iOS installation flows and mobile keyboard/viewport behavior verified; offline note editing not advertised.
@@ -232,4 +232,4 @@ Provide Bun scripts for `dev`, `build`, `start`, `db:migrate`, `test`, `lint`, a
 - Tiptap documentation: https://tiptap.dev/docs/editor/getting-started/overview
 - Next.js PWA guide: https://nextjs.org/docs/app/guides/progressive-web-apps
 
-**Deliberate non-goals:** don't add a settings page, manual saving, optional features, external storage, an ORM, or a more complex multi-instance/offline sync architecture unless explicitly approved.
+**Deliberate non-goals:** don't add a settings page, optional features, external storage, an ORM, or a more complex multi-instance/offline sync architecture unless explicitly approved. Manual Save alongside autosave was explicitly approved on 2026-11-05.
