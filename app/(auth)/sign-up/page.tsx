@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/src/components/page-placeholder";
+import { AuthForm } from "@/src/components/auth-form";
 
 export default function SignUpPage() {
-  return <PagePlaceholder heading="Sign up" description="Sign-up page placeholder." />;
+  return <AuthForm mode="register" />;
 }
