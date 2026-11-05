@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "bun ./node_modules/next/dist/bin/next dev",
+    "build": "bun ./node_modules/next/dist/bin/next build",
+    "start": "bun ./node_modules/next/dist/bin/next start",
     "lint": "oxlint && eslint",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
@@ -19,7 +19,8 @@
     "better-auth": "1.7.17",
     "next": "16.4.4",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
