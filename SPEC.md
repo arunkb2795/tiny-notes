@@ -12,33 +12,33 @@ Build a **mobile-first, installable PWA** for personal rich-text notes. Anyone m
 
 ## 2. Locked product decisions
 
-| Area | Requirement |
-|---|---|
-| Registration | **Open**; name, unique email, password (minimum 8 characters). No email confirmation; warn on signup that password recovery is unavailable. |
-| Auth | Better Auth email/password only; cookie sessions; signup signs user in. No custom password hashing or auth implementation. |
-| Data access | All server mutations use React/Next.js **Server Functions (Server Actions)**; all data fetching runs in **React Server Components** through server-only data access. |
-| Navigation | Path segments only; no application query parameters, search, or filtering. `/notes` always shows all owner notes in fixed newest-updated-first order. |
-| Notes | Separate required title (1–120 characters, trimmed) and valid rich-text JSON body (empty document allowed). Max serialized content **100 KiB** per note; **no per-user note-count quota**. |
-| Saving | **Autosave only**, not manual Save. Debounce **800 ms** after changes; flush on editor blur where possible. Explicit saving/saved/unsaved/error indicator and retry. |
-| Sharing | Off by default. Enabling creates a cryptographically random token; disabling deletes token and revokes prior URL; re-enabling issues a new token. |
-| Deletion | Permanent, with confirmation. |
-| Appearance | System theme initially; light/dark toggle in app header; persist override locally. **No `/settings` page.** |
-| PWA | Installable on Android and iOS; network required for notes/auth/share. No promise of offline editing or content availability. |
-| Hosting | Single Bun-compatible persistent server with writable SQLite disk; HTTPS in production. |
+| Area         | Requirement                                                                                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Registration | **Open**; name, unique email, password (minimum 8 characters). No email confirmation; warn on signup that password recovery is unavailable.                                                |
+| Auth         | Better Auth email/password only; cookie sessions; signup signs user in. No custom password hashing or auth implementation.                                                                 |
+| Data access  | All server mutations use React/Next.js **Server Functions (Server Actions)**; all data fetching runs in **React Server Components** through server-only data access.                       |
+| Navigation   | Path segments only; no application query parameters, search, or filtering. `/notes` always shows all owner notes in fixed newest-updated-first order.                                      |
+| Notes        | Separate required title (1–120 characters, trimmed) and valid rich-text JSON body (empty document allowed). Max serialized content **100 KiB** per note; **no per-user note-count quota**. |
+| Saving       | **Autosave only**, not manual Save. Debounce **800 ms** after changes; flush on editor blur where possible. Explicit saving/saved/unsaved/error indicator and retry.                       |
+| Sharing      | Off by default. Enabling creates a cryptographically random token; disabling deletes token and revokes prior URL; re-enabling issues a new token.                                          |
+| Deletion     | Permanent, with confirmation.                                                                                                                                                              |
+| Appearance   | System theme initially; light/dark toggle in app header; persist override locally. **No `/settings` page.**                                                                                |
+| PWA          | Installable on Android and iOS; network required for notes/auth/share. No promise of offline editing or content availability.                                                              |
+| Hosting      | Single Bun-compatible persistent server with writable SQLite disk; HTTPS in production.                                                                                                    |
 
 ## 3. Routes and UI
 
-| Route | Access | Page / behavior |
-|---|---|---|
-| `/` | Anyone | Redirect authenticated users to `/notes`, otherwise to `/sign-in`. |
-| `/sign-up` | Guest | Name, email, password, confirmation, validation and recoverable error states. |
-| `/sign-in` | Guest | Email/password, generic failed-login messaging. |
-| `/notes` | Authenticated | Notes newest first, empty state, Create button, note cards, deletion confirmation, sign-out, theme toggle. |
-| `/notes/new` | Authenticated | Draft title + Tiptap editor; first valid edit creates note via autosave, then replaces route with `/notes/:id`. |
-| `/notes/[id]` | Owner | Editor, autosave status, share toggle/copy link, delete; never exposes another user's content. |
-| `/share/[token]` | Anyone | Server-authorized, read-only rendered title/body, no editor controls; 404 for invalid/revoked token. |
-| `not-found.tsx` | Anyone | Branded accessible **404** with safe navigation home/sign-in; includes invalid, revoked, missing, and unauthorized note cases. |
-| `error.tsx` | Contextual | Friendly route error boundary with retry/navigation. Separate `global-error.tsx` for root failures. |
+| Route            | Access        | Page / behavior                                                                                                                |
+| ---------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `/`              | Anyone        | Redirect authenticated users to `/notes`, otherwise to `/sign-in`.                                                             |
+| `/sign-up`       | Guest         | Name, email, password, confirmation, validation and recoverable error states.                                                  |
+| `/sign-in`       | Guest         | Email/password, generic failed-login messaging.                                                                                |
+| `/notes`         | Authenticated | Notes newest first, empty state, Create button, note cards, deletion confirmation, sign-out, theme toggle.                     |
+| `/notes/new`     | Authenticated | Draft title + Tiptap editor; first valid edit creates note via autosave, then replaces route with `/notes/:id`.                |
+| `/notes/[id]`    | Owner         | Editor, autosave status, share toggle/copy link, delete; never exposes another user's content.                                 |
+| `/share/[token]` | Anyone        | Server-authorized, read-only rendered title/body, no editor controls; 404 for invalid/revoked token.                           |
+| `not-found.tsx`  | Anyone        | Branded accessible **404** with safe navigation home/sign-in; includes invalid, revoked, missing, and unauthorized note cases. |
+| `error.tsx`      | Contextual    | Friendly route error boundary with retry/navigation. Separate `global-error.tsx` for root failures.                            |
 
 **No `/settings` route**, link, menu item, or redirect. On unauthenticated requests to protected pages, redirect to `/sign-in` with no return-path query parameter; successful sign-in/signup always redirects to `/notes`. Logged-in visitors to auth pages go to `/notes`.
 
@@ -134,16 +134,16 @@ Routes take IDs/tokens from path segments only. Do not consume `searchParams` or
 
 Define async actions in dedicated modules with `'use server'`. Invoke them through form `action`/`formAction` or from Client Component event/debounce callbacks within a React transition. All server mutations, including authentication, use these actions; no custom mutation route handlers or manual HTTP requests.
 
-| Server Action | Input | Success |
-|---|---|---|
-| `signUpAction` | Name, email, password, confirmation | Better Auth creates user/session; redirect to `/notes`. |
-| `signInAction` | Email, password | Better Auth creates session; redirect to `/notes`. |
-| `signOutAction` | None | Better Auth ends session; redirect to `/sign-in`. |
-| `createNoteAction` | `{title, content}` | Validate/insert owner note; return saved `{id,title,content,revision,createdAt,updatedAt}`. |
-| `updateNoteAction` | `{id,title,content,revision}` | Atomic conditional update; return saved note and new revision. |
-| `deleteNoteAction` | `{id}` | Permanently delete owner note; return acknowledgement or redirect to `/notes`. |
-| `enableShareAction` | `{id}` | Create token if none; return full public URL to owner only. |
-| `disableShareAction` | `{id}` | Set token null; return acknowledgement. |
+| Server Action        | Input                               | Success                                                                                     |
+| -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `signUpAction`       | Name, email, password, confirmation | Better Auth creates user/session; redirect to `/notes`.                                     |
+| `signInAction`       | Email, password                     | Better Auth creates session; redirect to `/notes`.                                          |
+| `signOutAction`      | None                                | Better Auth ends session; redirect to `/sign-in`.                                           |
+| `createNoteAction`   | `{title, content}`                  | Validate/insert owner note; return saved `{id,title,content,revision,createdAt,updatedAt}`. |
+| `updateNoteAction`   | `{id,title,content,revision}`       | Atomic conditional update; return saved note and new revision.                              |
+| `deleteNoteAction`   | `{id}`                              | Permanently delete owner note; return acknowledgement or redirect to `/notes`.              |
+| `enableShareAction`  | `{id}`                              | Create token if none; return full public URL to owner only.                                 |
+| `disableShareAction` | `{id}`                              | Set token null; return acknowledgement.                                                     |
 
 Authenticate and authorize inside every protected action, validate all input, and rate-limit writes. Treat action arguments as untrusted even when passed from a Server Component. Return serializable results: `{ ok: true, data: ... }` or `{ ok: false, error: { code, message }, requestId?: string }`. Expected codes include `VALIDATION_ERROR`, `UNAUTHENTICATED`, `NOT_FOUND`, `CONFLICT`, `CONTENT_TOO_LARGE`, and `RATE_LIMITED`; unexpected errors use `INTERNAL_ERROR`, a generic message, and a correlation `requestId`. These are action results, not custom HTTP status contracts. Never expose stack traces, SQL, tokens (except an owner's requested share URL), environment variables, internal paths, or raw exception strings. Better Auth's infrastructure routes keep their library-defined contract.
 

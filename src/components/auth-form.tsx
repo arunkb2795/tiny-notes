@@ -34,10 +34,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     const fields = new FormData(form);
     const confirmation = form.elements.namedItem("confirmPassword");
 
-    if (
-      confirmation instanceof HTMLInputElement &&
-      fields.get("password") !== confirmation.value
-    ) {
+    if (confirmation instanceof HTMLInputElement && fields.get("password") !== confirmation.value) {
       confirmation.setCustomValidity("Passwords must match.");
       confirmation.reportValidity();
       return;
@@ -51,9 +48,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     <main className="mx-auto w-full max-w-sm py-4 sm:py-8">
       <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
       <p className="mt-2 text-foreground/70">
-        {isRegister
-          ? "Create your account to start taking notes."
-          : "Welcome back to Tiny Notes."}
+        {isRegister ? "Create your account to start taking notes." : "Welcome back to Tiny Notes."}
       </p>
 
       <form
@@ -66,9 +61,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         }}
         className="mt-8 space-y-5"
       >
-        {isRegister && (
-          <AuthField label="Name" id="name" name="name" autoComplete="name" />
-        )}
+        {isRegister && <AuthField label="Name" id="name" name="name" autoComplete="name" />}
         <AuthField
           label="Email"
           id="email"
@@ -90,8 +83,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {isRegister && (
           <>
             <p id="password-hint" className="text-sm text-foreground/70">
-              Use at least 8 characters. Password recovery is unavailable, so
-              keep your password somewhere safe.
+              Use at least 8 characters. Password recovery is unavailable, so keep your password
+              somewhere safe.
             </p>
             <AuthField
               label="Confirm password"
