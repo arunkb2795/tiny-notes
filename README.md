@@ -1,15 +1,21 @@
 # Tiny Notes
 
 Next.js App Router scaffold using React, TypeScript, Tailwind CSS, and Bun.
-See [SPEC.md](SPEC.md) for MVP requirements. Authentication routes and note
-access are not implemented yet; database migrations are available now.
+See [SPEC.md](SPEC.md) for MVP requirements. Email/password registration and login are implemented with Better Auth Server
+Actions. Each notes page checks its session in its own Server Component. Note
+features and ownership authorization remain deferred. The header shows Notes and
+Logout for signed-in users, or Login and Register for guests. Logout revokes the
+current session and redirects to `/sign-in`.
 
 ## Local setup
 
 Use Bun **1.4.4** and install dependencies with `bun install`. Copy `.env.example`
 to `.env` and set `DATABASE_PATH` to a writable SQLite file. Relative paths are
 resolved from the project root, regardless of the command's working directory.
-Missing parent directories are created automatically. Bun loads `.env`.
+The migration runner creates missing parent directories. Bun loads `.env`.
+Set `BETTER_AUTH_URL=http://localhost:3000` and generate `BETTER_AUTH_SECRET`
+with `bun -e "console.log(crypto.randomUUID() + crypto.randomUUID())"`. Keep
+the secret stable and private; it must contain at least 32 characters.
 
 ```sh
 bun run db:migrate
@@ -17,8 +23,13 @@ bun run dev
 ```
 
 Open http://localhost:3000. Migrations are explicit deployment commands, never
-run by application requests. Auth secrets and origins will be needed when live
-authentication is implemented; this migration tooling does not need them.
+run by application requests. The application opens an existing database and never applies migrations during
+requests. Migration tooling only needs `DATABASE_PATH`. Dev, build, and start
+scripts invoke Next.js’s CLI file directly with Bun so `bun:sqlite` remains
+available. Avoid `next dev` or `node` directly. After changing these scripts,
+stop any existing dev server and restart with `bun run dev`; hot reload cannot
+change its runtime. Direct CLI invocation also avoids propagating `--bun`
+through `NODE_OPTIONS` to Turbopack’s Node-based CSS workers on Windows.
 
 ## Up and Down migrations
 
@@ -96,3 +107,26 @@ and HTTPS. Run Up before starting the application. Keep databases outside
 `public/`, do not commit databases or secrets, and use WAL-aware backups
 (SQLite's backup API or a clean shutdown before copying the database). Do not
 use ephemeral/serverless storage or the Edge runtime.
+
+## Authentication
+
+Registration requires name, email, password (8–128 characters), and matching
+confirmation. Signup automatically signs in; both forms redirect to `/notes`.
+Password recovery and email verification are unavailable. Passwords are hashed
+only by Better Auth. Sessions use HttpOnly cookies and database-backed checks.
+Expired sessions redirect protected-page visitors to `/sign-in`; authenticated
+visitors to either auth page redirect to `/notes`. Guards run in each page RSC,
+never in layouts. No return-path query parameters are used.
+
+For production, set `BETTER_AUTH_URL` to the exact HTTPS public origin and
+keep `BETTER_AUTH_SECRET` stable across restarts. That origin is trusted for
+auth requests; Next.js Server Action origin protections remain enabled.
+Better Auth cookies are Secure in production. Requests must run under Bun,
+never Edge. Run migrations before `bun run build` and `bun run start`.
+
+Better Auth infrastructure endpoints have in-memory rate limiting enabled.
+Server Actions separately allow ten attempts per normalized email per minute,
+with bounded expiring storage. Limits reset on restart and are process-local,
+matching the single-server deployment. Login failures are generic; unexpected
+action failures return a correlation ID and log only that ID, operation, and
+failure category. No credentials or raw errors are logged.

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ComponentProps, type FormEvent } from "react";
+import { useActionState, type ComponentProps } from "react";
+import { signInAction, signUpAction } from "@/app/actions/auth";
 
 function AuthField({
   label,
@@ -26,23 +27,7 @@ function AuthField({
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const isRegister = mode === "register";
   const title = isRegister ? "Register" : "Login";
-  const [message, setMessage] = useState("");
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const fields = new FormData(form);
-    const confirmation = form.elements.namedItem("confirmPassword");
-
-    if (confirmation instanceof HTMLInputElement && fields.get("password") !== confirmation.value) {
-      confirmation.setCustomValidity("Passwords must match.");
-      confirmation.reportValidity();
-      return;
-    }
-
-    // Replace with a Server Action once Better Auth is configured.
-    setMessage("Authentication is not available yet. Please try again later.");
-  }
+  const [state, action, pending] = useActionState(isRegister ? signUpAction : signInAction, null);
 
   return (
     <main className="mx-auto w-full max-w-sm py-4 sm:py-8">
@@ -52,7 +37,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       </p>
 
       <form
-        onSubmit={handleSubmit}
+        action={action}
+        aria-busy={pending}
+        onSubmit={(event) => {
+          const confirmation = event.currentTarget.elements.namedItem("confirmPassword");
+          if (
+            confirmation instanceof HTMLInputElement &&
+            new FormData(event.currentTarget).get("password") !== confirmation.value
+          ) {
+            event.preventDefault();
+            confirmation.setCustomValidity("Passwords must match.");
+            confirmation.reportValidity();
+          }
+        }}
         onInput={(event) => {
           const confirmation = event.currentTarget.elements.namedItem("confirmPassword");
           if (confirmation instanceof HTMLInputElement) {
@@ -61,7 +58,16 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         }}
         className="mt-8 space-y-5"
       >
-        {isRegister && <AuthField label="Name" id="name" name="name" autoComplete="name" />}
+        {isRegister && (
+          <AuthField
+            label="Name"
+            id="name"
+            name="name"
+            autoComplete="name"
+            maxLength={200}
+            defaultValue={state?.values?.name}
+          />
+        )}
         <AuthField
           label="Email"
           id="email"
@@ -70,6 +76,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           autoComplete="email"
           autoCapitalize="none"
           spellCheck={false}
+          maxLength={254}
+          defaultValue={state?.values?.email}
         />
         <AuthField
           label="Password"
@@ -78,6 +86,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           type="password"
           autoComplete={isRegister ? "new-password" : "current-password"}
           minLength={isRegister ? 8 : undefined}
+          maxLength={128}
           aria-describedby={isRegister ? "password-hint" : undefined}
         />
         {isRegister && (
@@ -97,12 +106,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         )}
         <button
           type="submit"
+          disabled={pending}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-foreground px-4 py-2 font-medium text-background hover:bg-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foreground"
         >
-          {title}
+          {pending ? "Please wait…" : title}
         </button>
         <p role="status" className="text-sm text-foreground/70">
-          {message}
+          {state?.error.message}
         </p>
       </form>
 

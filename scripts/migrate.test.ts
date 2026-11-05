@@ -195,8 +195,8 @@ test("checked-in auth SQL matches the pinned Better Auth generator", async () =>
   try {
     const options = { database: db, emailAndPassword: { enabled: true } };
     const generated = await getMigrations(options);
-    expect((await generated.compileMigrations()).trim()).toBe(
-      readFileSync(resolve("migrations/001_auth.sql"), "utf8").trim(),
+    expect((await generated.compileMigrations()).replaceAll("\r\n", "\n").trim()).toBe(
+      readFileSync(resolve("migrations/001_auth.sql"), "utf8").replaceAll("\r\n", "\n").trim(),
     );
     db.exec(readFileSync(resolve("migrations/001_auth.sql"), "utf8"));
     const checked = await getMigrations(options);
