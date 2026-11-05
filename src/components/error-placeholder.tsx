@@ -6,14 +6,7 @@ type ErrorPlaceholderProps = {
 };
 
 export function ErrorPlaceholder({ notFound = false }: ErrorPlaceholderProps) {
-  const text = notFound
-    ? ERROR_PLACEHOLDER_TEXT.notFound
-    : ERROR_PLACEHOLDER_TEXT.error;
+  const text = notFound ? ERROR_PLACEHOLDER_TEXT.notFound : ERROR_PLACEHOLDER_TEXT.error;
 
-  return (
-    <PagePlaceholder
-      heading={text.heading}
-      description={text.description}
-    />
-  );
+  return <PagePlaceholder heading={text.heading} description={text.description} />;
 }
