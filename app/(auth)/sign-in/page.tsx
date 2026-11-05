@@ -1,5 +1,5 @@
-import { PagePlaceholder } from "@/src/components/page-placeholder";
+import { AuthForm } from "@/src/components/auth-form";
 
 export default function SignInPage() {
-  return <PagePlaceholder heading="Sign in" description="Sign-in page placeholder." />;
+  return <AuthForm mode="login" />;
 }
