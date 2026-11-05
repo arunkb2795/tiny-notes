@@ -2,10 +2,40 @@
 
 Next.js App Router scaffold using React, TypeScript, Tailwind CSS, and Bun.
 See [SPEC.md](SPEC.md) for MVP requirements. Email/password registration and login are implemented with Better Auth Server
-Actions. Each notes page checks its session in its own Server Component. Note
-features and ownership authorization remain deferred. The header shows Notes and
+Actions. Each notes page checks its session in its own Server Component. Notes
+enforce ownership on every read and mutation. The header shows Notes and
 Logout for signed-in users, or Login and Register for guests. Logout revokes the
 current session and redirects to `/sign-in`.
+
+## Notes
+
+The authenticated `/notes` area lists only your notes, newest updated first. Create
+a note at `/notes/new`, enter a title, and use the Tiptap toolbar to format its body.
+Changes autosave after 800 ms or on editor blur. The Save button saves immediately
+through the same queue and can retry failed saves. A title is required; empty bodies
+are allowed. Notes are limited to 100 KiB of validated rich-text JSON.
+
+Save status reflects server acknowledgements. Network failures retain the draft
+in memory and offer Retry. Conflicts pause saving until you reload the server
+version or keep your local draft for reference. Session expiry retains the draft;
+sign in to the original account in another tab before retrying. Drafts are not
+stored offline and are lost if you confirm leaving before they save.
+
+App navigation and logout save pending edits before leaving. A progress notice
+offers Stay here while saving; failures keep the draft open with an explicit,
+confirmed Discard and leave option. Closing/reloading the browser still warns
+about unsaved edits where supported. Links keep Next.js prefetching and show
+pending feedback; list/editor skeletons reserve space during route loading.
+Session reads are deduplicated only within a server request, never across users
+or requests. Saves invalidate the list, while the editor consumes the save
+acknowledgement without a second editor-route invalidation.
+
+Delete permanently removes a note after confirmation. Public sharing is off by
+default. Enable it in the editor to copy a read-only URL showing the last saved
+version. Disabling immediately revokes the URL; enabling again creates a new one.
+Sharing and notes are rendered on request and must not be cached by deployment
+proxies. Use a single Bun server with the existing database migrations; no new
+schema migration is required for these features.
 
 ## Local setup
 

@@ -1,13 +1,29 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { signOutAction } from "@/app/actions/auth";
+import { useNotesNavigation } from "./notes-navigation-provider";
 
 export function LogoutButton() {
-  const [state, action, pending] = useActionState(signOutAction, null);
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+  const navigation = useNotesNavigation();
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    setError("");
+    startTransition(async () => {
+      await navigation.request(async () => {
+        const result = await signOutAction();
+        if (result) {
+          setError(result.error.message);
+          navigation.cancel();
+        }
+      }, "/sign-in");
+    });
+  }
 
   return (
-    <form action={action} aria-busy={pending} className="relative">
+    <form onSubmit={handleSubmit} aria-busy={pending} className="relative">
       <button
         type="submit"
         disabled={pending}
@@ -15,12 +31,12 @@ export function LogoutButton() {
       >
         {pending ? "Logging out…" : "Logout"}
       </button>
-      {state && (
+      {error && (
         <p
           role="alert"
           className="absolute top-full right-0 z-10 mt-2 w-64 rounded-md border border-foreground/25 bg-background p-3 text-sm text-foreground"
         >
-          {state.error.message}
+          {error}
         </p>
       )}
     </form>

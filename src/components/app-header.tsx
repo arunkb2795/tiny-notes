@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink as Link } from "./app-link";
 import { Suspense } from "react";
 import { getSession } from "@/src/lib/session";
 import { LogoutButton } from "./logout-button";
